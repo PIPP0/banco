@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#f5f7fa">
+<title>Quitar fondo</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✂️</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css?v=11">
+<style>
+  .notice{
+    display:flex;
+    gap:10px;
+    align-items:flex-start;
+    background:rgba(255,209,102,0.18);
+    border:1px solid rgba(255,209,102,0.4);
+    border-radius:12px;
+    padding:12px 14px;
+    font-size:12.5px;
+    color:#8a5a00;
+    margin-bottom:16px;
+  }
+  img.preview-img{
+    width:100%;
+    max-height:340px;
+    object-fit:contain;
+    border-radius:12px;
+    margin-top:16px;
+    background:repeating-conic-gradient(#e2e5ea 0% 25%, #f4f6f9 0% 50%) 50% / 20px 20px;
+  }
+  .side-by-side{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+  }
+  .side-by-side .col{ text-align:center; }
+  .side-by-side .lbl{ font-size:12px; color:var(--muted); margin-top:8px; font-weight:600; }
+  @media (max-width:520px){ .side-by-side{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<div class="bg-glow"></div>
+
+<nav class="topnav">
+  <div class="topnav-inner">
+    <a class="topnav-brand" href="../index.html">
+      <span class="nav-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg></span>
+      <span class="brand-text">Caja de Herramientas</span>
+    </a>
+    <div class="topnav-links">
+      <a href="../index.html">Herramientas</a>
+      <a href="../index.html#como-funciona">Cómo funciona</a>
+    </div>
+  </div>
+</nav>
+
+<div class="wrap">
+  <header>
+    <div class="logo-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3"></circle><circle cx="6" cy="18" r="3"></circle><line x1="20" y1="4" x2="8.12" y2="15.88"></line><line x1="14.47" y1="14.48" x2="20" y2="20"></line><line x1="8.12" y1="8.12" x2="12" y2="12"></line></svg></div>
+    <h1>Quitar fondo</h1>
+    <p>Elimina el fondo de una foto directo en el navegador.</p>
+  </header>
+
+  <div class="notice">
+    ⚠️ <div>Usa un modelo de IA más preciso (~55MB) que se descarga la primera vez que conviertes una imagen — puede tardar unos segundos según tu conexión, y después queda guardado en el navegador. Funciona con personas, productos, animales y la mayoría de fotos con un sujeto claro; ninguna herramienta gratuita acierta el 100% siempre.</div>
+  </div>
+
+  <div class="steps">
+    <div class="step" id="step1"><span class="num">1</span><span class="label">Subir</span></div>
+    <div class="step" id="step2"><span class="num">2</span><span class="label">Procesar</span></div>
+    <div class="step" id="step3"><span class="num">3</span><span class="label">Descargar</span></div>
+  </div>
+
+  <div class="card" id="uploadCard">
+    <div class="drop" id="drop">
+      <div class="icon">🖼️</div>
+      <div class="main">Arrastra una foto aquí o haz clic para elegir</div>
+      <div class="sub">Personas, productos, animales… lo que tenga un sujeto claro</div>
+      <input type="file" id="fileInput" accept="image/*">
+    </div>
+    <div class="file-chip" id="fileChip">
+      <span>🖼️</span>
+      <span class="name" id="fileName"></span>
+      <span class="change" id="fileChange">Cambiar</span>
+    </div>
+    <img id="preview" class="preview-img hidden" alt="Vista previa">
+  </div>
+
+  <div class="card hidden" id="optionsCard">
+    <button class="primary" id="convertBtn">✨ Quitar fondo</button>
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-label" id="progressLabel"><span class="spin">⏳</span> Cargando modelo (una sola vez)…</div>
+    </div>
+  </div>
+
+  <div class="card result" id="resultCard">
+    <div class="result-badge">✓ Listo</div>
+    <div class="side-by-side">
+      <div class="col">
+        <img id="beforeImg" class="preview-img" alt="Original">
+        <div class="lbl">Original</div>
+      </div>
+      <div class="col">
+        <img id="afterImg" class="preview-img" alt="Sin fondo">
+        <div class="lbl">Sin fondo</div>
+      </div>
+    </div>
+    <div class="result-actions" style="margin-top:16px;">
+      <a class="download" id="downloadLink" download="sin-fondo.png">⬇ Descargar PNG</a>
+      <button class="ghost" id="resetBtn">↻ Otra foto</button>
+    </div>
+  </div>
+
+  <div class="footer-note">El procesamiento ocurre 100% en tu navegador. La primera vez tarda bastante más porque descarga un modelo de IA de alta precisión (~55MB) — después queda guardado en tu navegador.</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="../vendor/ort/ort.wasm.min.js"></script>
+<script>
+const drop = document.getElementById('drop');
+const fileInput = document.getElementById('fileInput');
+const fileChip = document.getElementById('fileChip');
+const fileName = document.getElementById('fileName');
+const fileChange = document.getElementById('fileChange');
+const preview = document.getElementById('preview');
+const optionsCard = document.getElementById('optionsCard');
+const convertBtn = document.getElementById('convertBtn');
+const progressWrap = document.getElementById('progressWrap');
+const progressFill = document.getElementById('progressFill');
+const progressLabel = document.getElementById('progressLabel');
+const toast = document.getElementById('toast');
+const resultCard = document.getElementById('resultCard');
+const beforeImg = document.getElementById('beforeImg');
+const afterImg = document.getElementById('afterImg');
+const downloadLink = document.getElementById('downloadLink');
+const resetBtn = document.getElementById('resetBtn');
+const step1 = document.getElementById('step1');
+const step2 = document.getElementById('step2');
+const step3 = document.getElementById('step3');
+
+let currentImg = null;
+let toastTimer = null;
+let ortSession = null;
+const MODEL_SIZE = 320; // u2netp.onnx has a fixed 320x320 input shape
+
+function setStep(n){
+  [step1, step2, step3].forEach((el, i) => {
+    el.classList.toggle('done', i + 1 < n);
+    el.classList.toggle('active', i + 1 === n);
+  });
+}
+setStep(1);
+
+function showToast(msg){
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 4200);
+}
+
+function handleFile(file){
+  if (!file || !file.type.startsWith('image/')){
+    showToast('Por favor elige un archivo de imagen válido.');
+    return;
+  }
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  img.onload = () => {
+    currentImg = img;
+    preview.src = url;
+    preview.classList.remove('hidden');
+    fileName.textContent = file.name;
+    fileChip.classList.add('show');
+    optionsCard.classList.remove('hidden');
+    resultCard.classList.remove('show');
+    setStep(2);
+    optionsCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
+  img.src = url;
+}
+
+drop.addEventListener('click', () => fileInput.click());
+drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('dragover'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
+drop.addEventListener('drop', (e) => {
+  e.preventDefault();
+  drop.classList.remove('dragover');
+  handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+fileChange.addEventListener('click', (e) => { e.stopPropagation(); fileInput.click(); });
+
+ort.env.wasm.wasmPaths = { 'ort-wasm-simd-threaded.wasm': new URL('../vendor/ort/ort-wasm-simd-threaded.wasm', document.baseURI).href };
+ort.env.wasm.numThreads = 1;
+
+async function ensureModel(onProgress){
+  if (ortSession) return ortSession;
+
+  const resp = await fetch(new URL('../vendor/segment/silueta.onnx', document.baseURI).href);
+  const total = parseInt(resp.headers.get('content-length') || '0', 10);
+  const reader = resp.body.getReader();
+  const chunks = [];
+  let received = 0;
+  while (true){
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    received += value.length;
+    if (total) onProgress(received / total);
+  }
+  const modelBytes = new Uint8Array(received);
+  let offset = 0;
+  for (const chunk of chunks){ modelBytes.set(chunk, offset); offset += chunk.length; }
+
+  ortSession = await ort.InferenceSession.create(modelBytes, { executionProviders: ['wasm'] });
+  return ortSession;
+}
+
+async function segmentOnce(session, imgEl){
+  // Tried letterboxing (scale to fit + pad) here to avoid distorting
+  // tall/narrow photos, expecting it to improve mask quality. Measured
+  // it head-to-head against plain stretching on the same test image and
+  // it was clearly worse (opaque pixel count dropped by ~97%, dark-edge
+  // pixels went up ~3x) — this small model appears to have been
+  // exported/tuned around simple stretch-to-square resizing, and the
+  // gray padding throws it off. Reverted to stretching.
+  const size = MODEL_SIZE;
+  const inCanvas = document.createElement('canvas');
+  inCanvas.width = size; inCanvas.height = size;
+  const inCtx = inCanvas.getContext('2d');
+  inCtx.drawImage(imgEl, 0, 0, size, size);
+  const src = inCtx.getImageData(0, 0, size, size).data;
+
+  // Match the reference preprocessing exactly: it normalizes by the
+  // image's own max pixel value (im_ary / max(np.max(im_ary), 1e-6)),
+  // not a fixed /255. In most photos the brightest pixel is ~255 so this
+  // rarely matters, but for a duller/lower-contrast render it does — and
+  // the model was trained expecting exactly this normalization.
+  let maxVal = 0;
+  for (let i = 0; i < src.length; i += 4){
+    if (src[i] > maxVal) maxVal = src[i];
+    if (src[i + 1] > maxVal) maxVal = src[i + 1];
+    if (src[i + 2] > maxVal) maxVal = src[i + 2];
+  }
+  maxVal = Math.max(maxVal, 1e-6);
+
+  const mean = [0.485, 0.456, 0.406];
+  const std = [0.229, 0.224, 0.225];
+  const plane = size * size;
+  const input = new Float32Array(3 * plane);
+  for (let i = 0; i < plane; i++){
+    input[i]             = (src[i * 4]     / maxVal - mean[0]) / std[0];
+    input[plane + i]     = (src[i * 4 + 1] / maxVal - mean[1]) / std[1];
+    input[2 * plane + i] = (src[i * 4 + 2] / maxVal - mean[2]) / std[2];
+  }
+
+  const tensor = new ort.Tensor('float32', input, [1, 3, size, size]);
+  const feeds = {};
+  feeds[session.inputNames[0]] = tensor;
+  const out = await session.run(feeds);
+  const data = out[session.outputNames[0]].data;
+
+  let min = Infinity, max = -Infinity;
+  for (let i = 0; i < data.length; i++){
+    if (data[i] < min) min = data[i];
+    if (data[i] > max) max = data[i];
+  }
+  const range = (max - min) || 1;
+
+  const maskSmall = document.createElement('canvas');
+  maskSmall.width = size; maskSmall.height = size;
+  const maskCtx = maskSmall.getContext('2d');
+  const maskImg = maskCtx.createImageData(size, size);
+  for (let i = 0; i < plane; i++){
+    const v = Math.max(0, Math.min(255, Math.round(((data[i] - min) / range) * 255)));
+    maskImg.data[i * 4] = v;
+    maskImg.data[i * 4 + 1] = v;
+    maskImg.data[i * 4 + 2] = v;
+    maskImg.data[i * 4 + 3] = 255;
+  }
+  maskCtx.putImageData(maskImg, 0, 0);
+  return maskSmall;
+}
+
+convertBtn.addEventListener('click', async () => {
+  if (!currentImg) return;
+  resultCard.classList.remove('show');
+  convertBtn.disabled = true;
+  progressWrap.classList.add('show');
+  progressFill.style.width = '15%';
+  progressLabel.innerHTML = '<span class="spin">⏳</span> Cargando modelo (una sola vez)…';
+
+  try {
+    progressLabel.innerHTML = '<span class="spin">⏳</span> Cargando modelo de IA (una sola vez)…';
+    const session = await ensureModel((frac) => {
+      progressFill.style.width = Math.round(frac * 60) + '%';
+    });
+    progressFill.style.width = '65%';
+    progressLabel.innerHTML = '<span class="spin">🧠</span> Analizando la imagen…';
+
+    const maskSmall = await segmentOnce(session, currentImg);
+    progressFill.style.width = '85%';
+    progressLabel.innerHTML = '<span class="spin">✂️</span> Recortando el fondo…';
+
+    const w = currentImg.naturalWidth;
+    const h = currentImg.naturalHeight;
+
+    const maskCanvas = document.createElement('canvas');
+    maskCanvas.width = w; maskCanvas.height = h;
+    maskCanvas.getContext('2d').drawImage(maskSmall, 0, 0, w, h);
+    const maskData = maskCanvas.getContext('2d').getImageData(0, 0, w, h).data;
+
+    const imgCanvas = document.createElement('canvas');
+    imgCanvas.width = w; imgCanvas.height = h;
+    const imgCtx = imgCanvas.getContext('2d');
+    imgCtx.drawImage(currentImg, 0, 0, w, h);
+    const imgData = imgCtx.getImageData(0, 0, w, h);
+    const px = imgData.data;
+
+    // Estimate the background color by sampling the four corners, to
+    // "decontaminate" semi-transparent edge pixels (avoids a dark halo
+    // left over from the original background bleeding through).
+    const sampleBlock = (sx, sy) => {
+      let r = 0, g = 0, b = 0, n = 0;
+      const size = Math.max(3, Math.round(Math.min(w, h) * 0.02));
+      for (let y = sy; y < sy + size; y++){
+        for (let x = sx; x < sx + size; x++){
+          if (x < 0 || y < 0 || x >= w || y >= h) continue;
+          const idx = (y * w + x) * 4;
+          r += px[idx]; g += px[idx + 1]; b += px[idx + 2]; n++;
+        }
+      }
+      return n ? [r / n, g / n, b / n] : [0, 0, 0];
+    };
+    const corners = [sampleBlock(0, 0), sampleBlock(w - 4, 0), sampleBlock(0, h - 4), sampleBlock(w - 4, h - 4)];
+    const bg = [0, 1, 2].map(c => corners.reduce((s, v) => s + v[c], 0) / corners.length);
+
+    // IMPORTANT: never hard-zero mid-confidence pixels here (an earlier
+    // version did, and on real photos — unlike the flat-color synthetic
+    // images this was first tuned on — model confidence dips into that
+    // range over legitimate parts of the subject too, which deleted
+    // entire limbs/torso sections). Losing real content is far worse
+    // than an edge artifact, so every pixel the model gives any weight
+    // to is kept.
+    //
+    // Color decontamination (subtracting the background's contribution)
+    // is only mathematically valid for pixels that are a *true*
+    // anti-aliased blend of subject+background at the boundary — for
+    // that, mid-to-low mask confidence is a good proxy. But applying the
+    // same math to an interior pixel the model is merely *unsure* about
+    // (not an actual color blend) subtracts a background contribution
+    // that was never really there, producing a muddy/grayish smudge
+    // instead of the subject's real color. So: only decontaminate
+    // pixels close to full confidence (a real thin edge band); anything
+    // less sure keeps its original captured color, just partially
+    // transparent.
+    const DECONTAMINATE_ABOVE = 0.6;
+
+    for (let i = 0; i < px.length; i += 4){
+      const a = maskData[i];
+      if (a > 0 && a < 255){
+        const af = a / 255;
+        if (af >= DECONTAMINATE_ABOVE){
+          px[i]     = Math.min(255, Math.max(0, (px[i]     - (1 - af) * bg[0]) / af));
+          px[i + 1] = Math.min(255, Math.max(0, (px[i + 1] - (1 - af) * bg[1]) / af));
+          px[i + 2] = Math.min(255, Math.max(0, (px[i + 2] - (1 - af) * bg[2]) / af));
+        }
+      }
+      px[i + 3] = a;
+    }
+
+    const outCanvas = document.createElement('canvas');
+    outCanvas.width = w; outCanvas.height = h;
+    outCanvas.getContext('2d').putImageData(imgData, 0, 0);
+
+    const blob = await new Promise(resolve => outCanvas.toBlob(resolve, 'image/png'));
+    const url = URL.createObjectURL(blob);
+
+    beforeImg.src = currentImg.src;
+    afterImg.src = url;
+    downloadLink.href = url;
+
+    progressFill.style.width = '100%';
+    resultCard.classList.add('show');
+    resultCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    progressLabel.textContent = '¡Listo!';
+    setStep(3);
+  } catch (err) {
+    console.error(err);
+    showToast('Ocurrió un error al quitar el fondo: ' + (err?.message || err));
+  } finally {
+    convertBtn.disabled = false;
+    setTimeout(() => progressWrap.classList.remove('show'), 800);
+  }
+});
+
+resetBtn.addEventListener('click', () => {
+  currentImg = null;
+  fileInput.value = '';
+  preview.src = '';
+  preview.classList.add('hidden');
+  fileChip.classList.remove('show');
+  optionsCard.classList.add('hidden');
+  resultCard.classList.remove('show');
+  setStep(1);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#f5f7fa">
+<title>Word a PDF</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📄</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../assets/style.css?v=11">
+<style>
+  .notice{
+    display:flex;
+    gap:10px;
+    align-items:flex-start;
+    background:rgba(61,220,151,0.14);
+    border:1px solid rgba(61,220,151,0.35);
+    border-radius:12px;
+    padding:12px 14px;
+    font-size:12.5px;
+    color:var(--ok);
+    margin-bottom:16px;
+  }
+  .doc-preview{
+    background:#fff;
+    color:#1a1a1a;
+    border-radius:10px;
+    padding:32px;
+    max-height:480px;
+    overflow-y:auto;
+    margin-top:16px;
+    font-family:Georgia, 'Times New Roman', serif;
+    line-height:1.55;
+    font-size:14px;
+  }
+  .doc-preview img{ max-width:100%; }
+  /* El sitio fuerza "Sora" en todo h1/h2/h3 (assets/style.css) — eso
+     también pisaba la tipografía real del Word dentro de la vista previa.
+     Los títulos del documento deben heredar la fuente del documento, no
+     la del sitio. */
+  .doc-preview h1, .doc-preview h2, .doc-preview h3, .doc-preview h4{ font-family:inherit; }
+  .doc-preview table{ border-collapse:collapse; width:100%; }
+  .doc-preview td, .doc-preview th{ border:1px solid #ccc; padding:6px 8px; }
+
+  .spell-summary{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:13px;
+    font-weight:700;
+    padding:10px 14px;
+    border-radius:10px;
+    margin-top:14px;
+  }
+  .spell-summary.ok{
+    color:var(--ok);
+    background:rgba(61,220,151,0.12);
+    border:1px solid rgba(61,220,151,0.3);
+  }
+  .spell-summary.warn{
+    color:#8a5a00;
+    background:rgba(255,209,102,0.18);
+    border:1px solid rgba(255,209,102,0.4);
+  }
+  .spell-list{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    margin-top:10px;
+  }
+  .spell-chip{
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    border-radius:999px;
+    padding:6px 12px;
+    font-size:12.5px;
+  }
+  .spell-chip .w{ color:var(--danger); font-weight:700; text-decoration:line-through; }
+  .spell-chip .s{ color:var(--ok); font-weight:700; }
+</style>
+</head>
+<body>
+<div class="bg-glow"></div>
+
+<nav class="topnav">
+  <div class="topnav-inner">
+    <a class="topnav-brand" href="../index.html">
+      <span class="nav-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"></rect><rect x="14" y="3" width="7" height="7" rx="1.5"></rect><rect x="3" y="14" width="7" height="7" rx="1.5"></rect><rect x="14" y="14" width="7" height="7" rx="1.5"></rect></svg></span>
+      <span class="brand-text">Caja de Herramientas</span>
+    </a>
+    <div class="topnav-links">
+      <a href="../index.html">Herramientas</a>
+      <a href="../index.html#como-funciona">Cómo funciona</a>
+    </div>
+  </div>
+</nav>
+
+<div class="wrap">
+  <header>
+    <div class="logo-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg></div>
+    <h1>Word → PDF</h1>
+    <p>Convierte un documento .docx a PDF directo en el navegador.</p>
+  </header>
+
+  <div class="notice">
+    ✅ <div>Funciona mejor con documentos de texto simples (párrafos, títulos, listas, tablas básicas). Formato muy complejo (encabezados/pies de página, columnas, estilos avanzados) puede no verse idéntico al original.</div>
+  </div>
+
+  <div class="steps">
+    <div class="step" id="step1"><span class="num">1</span><span class="label">Subir</span></div>
+    <div class="step" id="step2"><span class="num">2</span><span class="label">Revisar</span></div>
+    <div class="step" id="step3"><span class="num">3</span><span class="label">Descargar</span></div>
+  </div>
+
+  <div class="card" id="uploadCard">
+    <div class="drop" id="drop">
+      <div class="icon">📄</div>
+      <div class="main">Arrastra un archivo .docx aquí o haz clic para elegir</div>
+      <div class="sub">Solo formato .docx (Word moderno)</div>
+      <input type="file" id="fileInput" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document">
+    </div>
+    <div class="file-chip" id="fileChip">
+      <span>📄</span>
+      <span class="name" id="fileName"></span>
+      <span class="change" id="fileChange">Cambiar</span>
+    </div>
+  </div>
+
+  <div class="card hidden" id="previewCard">
+    <div class="doc-preview" id="docPreview"></div>
+
+    <button class="preview-btn" id="spellBtn">✍️ Revisar ortografía antes de descargar</button>
+    <div id="spellResults"></div>
+
+    <button class="primary" id="convertBtn">✨ Descargar como PDF</button>
+
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+      <div class="progress-label" id="progressLabel"><span class="spin">⏳</span> Generando PDF…</div>
+    </div>
+  </div>
+
+  <div class="card result hidden" id="resultCard">
+    <div class="result-badge">✓ Listo</div>
+    <div class="meta" id="resultMeta"></div>
+    <div class="result-actions">
+      <button class="ghost" id="resetBtn">↻ Otro documento</button>
+    </div>
+  </div>
+
+  <div class="footer-note">La conversión ocurre 100% en tu navegador.</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="../vendor/jszip.min.js"></script>
+<script src="../vendor/mammoth/mammoth.browser.min.js"></script>
+<script src="../vendor/html2pdf/html2pdf.bundle.min.js"></script>
+<script src="../vendor/pdflib/pdf-lib.min.js"></script>
+<script src="../vendor/spellcheck/typo.js"></script>
+<script>
+const drop = document.getElementById('drop');
+const fileInput = document.getElementById('fileInput');
+const fileChip = document.getElementById('fileChip');
+const fileName = document.getElementById('fileName');
+const fileChange = document.getElementById('fileChange');
+const previewCard = document.getElementById('previewCard');
+const docPreview = document.getElementById('docPreview');
+const convertBtn = document.getElementById('convertBtn');
+const progressWrap = document.getElementById('progressWrap');
+const progressFill = document.getElementById('progressFill');
+const progressLabel = document.getElementById('progressLabel');
+const toast = document.getElementById('toast');
+const resultCard = document.getElementById('resultCard');
+const resultMeta = document.getElementById('resultMeta');
+const resetBtn = document.getElementById('resetBtn');
+const spellBtn = document.getElementById('spellBtn');
+const spellResults = document.getElementById('spellResults');
+const step1 = document.getElementById('step1');
+const step2 = document.getElementById('step2');
+const step3 = document.getElementById('step3');
+
+let currentFile = null;
+let docPageSetup = null;
+let docFontFamily = null;
+let toastTimer = null;
+let dict = null;
+
+const WORD_RE = /[A-Za-zÀ-ÖØ-öø-ÿ]+/;
+const SPLIT_RE = /([^A-Za-zÀ-ÖØ-öø-ÿ]+)/;
+
+function isCheckable(word){
+  if (word.length < 2) return false;
+  if (/\d/.test(word)) return false;
+  return true;
+}
+function checkWord(d, word){
+  if (d.check(word)) return true;
+  if (d.check(word.toLowerCase())) return true;
+  return false;
+}
+
+async function ensureDict(){
+  if (dict) return dict;
+  const [affData, wordsData] = await Promise.all([
+    fetch('../vendor/spellcheck/es.aff').then(r => r.text()),
+    fetch('../vendor/spellcheck/es.dic').then(r => r.text())
+  ]);
+  dict = new Typo('es', affData, wordsData);
+  return dict;
+}
+
+function setStep(n){
+  [step1, step2, step3].forEach((el, i) => {
+    el.classList.toggle('done', i + 1 < n);
+    el.classList.toggle('active', i + 1 === n);
+  });
+}
+setStep(1);
+
+function showToast(msg){
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove('show'), 4200);
+}
+
+// Word guarda el recorte de imagen (herramienta "Recortar") como un
+// rectángulo <a:srcRect> dentro de la propia imagen, no como un cambio real
+// al archivo de la foto, y guarda el tamaño real con el que se ve la imagen
+// (<wp:extent>, en EMU) separado de la resolución nativa del archivo —
+// mammoth.js extrae la imagen completa, ignorando ambos datos. Esto lee
+// esa info directamente del .docx (que es un .zip) para poder aplicarla
+// como CSS sobre las imágenes ya insertadas por mammoth.
+async function getImageLayout(arrayBuffer){
+  try {
+    const zip = await JSZip.loadAsync(arrayBuffer);
+    const docXmlFile = zip.file('word/document.xml');
+    if (!docXmlFile) return [];
+    const docXml = await docXmlFile.async('text');
+
+    const layouts = [];
+    // Se recorre por párrafo (no solo por <w:drawing> suelto) para poder
+    // leer también la alineación real de ese párrafo (<w:jc>) — varias
+    // imágenes chicas puestas una junto a otra en la misma línea de Word
+    // deben quedar así en el PDF, no siempre centradas ni cada una en su
+    // propia línea.
+    for (const pm of docXml.matchAll(/<w:p\b[^>]*>([\s\S]*?)<\/w:p>/g)){
+      const pBlock = pm[1];
+      if (!pBlock.includes('<w:drawing>')) continue;
+      const jcMatch = pBlock.match(/<w:jc\b[^>]*w:val="([^"]+)"/);
+      const align = jcMatch ? jcMatch[1] : null;
+      for (const m of pBlock.matchAll(/<w:drawing>([\s\S]*?)<\/w:drawing>/g)){
+        const block = m[1];
+        const embedMatch = block.match(/r:embed="([^"]+)"/);
+        if (!embedMatch) continue;
+        const rectMatch = block.match(/<a:srcRect\b([^/]*)\/>/);
+        let crop = null;
+        if (rectMatch){
+          const attrs = rectMatch[1];
+          const get = (name) => {
+            const am = attrs.match(new RegExp(name + '="(-?\\d+)"'));
+            return am ? parseInt(am[1], 10) / 100000 : 0;
+          };
+          const l = get('l'), t = get('t'), r = get('r'), b = get('b');
+          if (l || t || r || b) crop = { l, t, r, b };
+        }
+        const extentMatch = block.match(/<wp:extent\b([^/]*)\/>/);
+        let widthMM = null;
+        if (extentMatch){
+          const cxMatch = extentMatch[1].match(/cx="(\d+)"/);
+          if (cxMatch) widthMM = parseInt(cxMatch[1], 10) / 914400 * 25.4;
+        }
+        layouts.push({ crop, widthMM, align });
+      }
+    }
+    return layouts;
+  } catch (err) {
+    console.error('No se pudo leer el tamaño/recorte de imágenes:', err);
+    return [];
+  }
+}
+
+// Lee el tamaño de página y los márgenes reales del .docx (guardados en
+// twips, 1/1440 de pulgada) para que el PDF generado tenga el mismo ancho
+// de contenido que el Word original, en vez de forzar siempre A4 con 12mm
+// de margen — eso hacía que documentos en tamaño Carta (u otros) salieran
+// con un ancho distinto al que se ve en Word.
+async function getPageSetup(arrayBuffer){
+  const fallback = { widthMM: 210, heightMM: 297, marginTopMM: 12, marginRightMM: 12, marginBottomMM: 12, marginLeftMM: 12 };
+  try {
+    const zip = await JSZip.loadAsync(arrayBuffer);
+    const docXmlFile = zip.file('word/document.xml');
+    if (!docXmlFile) return fallback;
+    const docXml = await docXmlFile.async('text');
+    const sectPrMatch = docXml.match(/<w:sectPr\b[^>]*>[\s\S]*?<\/w:sectPr>/);
+    if (!sectPrMatch) return fallback;
+    const block = sectPrMatch[0];
+    const pgSzMatch = block.match(/<w:pgSz\b([^/]*)\/>/);
+    const pgMarMatch = block.match(/<w:pgMar\b([^/]*)\/>/);
+    if (!pgSzMatch) return fallback;
+    const twipToMM = (twips) => twips / 1440 * 25.4;
+    const getAttr = (attrs, name) => {
+      const m = attrs.match(new RegExp(name + '="(-?\\d+)"'));
+      return m ? parseInt(m[1], 10) : null;
+    };
+    const w = getAttr(pgSzMatch[1], 'w:w');
+    const h = getAttr(pgSzMatch[1], 'w:h');
+    if (!w || !h) return fallback;
+    const setup = { widthMM: twipToMM(w), heightMM: twipToMM(h) };
+    if (pgMarMatch){
+      const attrs = pgMarMatch[1];
+      const top = getAttr(attrs, 'w:top');
+      const bottom = getAttr(attrs, 'w:bottom');
+      const left = getAttr(attrs, 'w:left');
+      const right = getAttr(attrs, 'w:right');
+      setup.marginTopMM = top != null ? twipToMM(top) : 12;
+      setup.marginBottomMM = bottom != null ? twipToMM(bottom) : 12;
+      setup.marginLeftMM = left != null ? twipToMM(left) : 12;
+      setup.marginRightMM = right != null ? twipToMM(right) : 12;
+    } else {
+      setup.marginTopMM = setup.marginRightMM = setup.marginBottomMM = setup.marginLeftMM = 12;
+    }
+    // Sanidad: si algo sale fuera de rango razonable, usar A4 estándar en
+    // vez de arriesgarse a una página absurda con un documento mal formado.
+    if (setup.widthMM < 50 || setup.widthMM > 1000 || setup.heightMM < 50 || setup.heightMM > 1000) return fallback;
+    const minMargin = Math.min(setup.marginTopMM, setup.marginRightMM, setup.marginBottomMM, setup.marginLeftMM);
+    if (minMargin < 0 || setup.marginLeftMM + setup.marginRightMM >= setup.widthMM || setup.marginTopMM + setup.marginBottomMM >= setup.heightMM) return fallback;
+    return setup;
+  } catch (err) {
+    console.error('No se pudo leer el tamaño de página:', err);
+    return fallback;
+  }
+}
+
+// Nombres de fuente conocidos por su forma (con serifa) para elegir un
+// respaldo genérico razonable cuando la fuente del Word no esté instalada
+// en el navegador ni disponible en Google Fonts.
+const SERIF_FONT_HINTS = /times|georgia|garamond|cambria|serif|palatino|book antiqua|constantia|cormorant|playfair|merriweather/i;
+
+// Lee la fuente real del documento desde word/styles.xml (<w:docDefaults>,
+// o si no, el estilo "Normal") — mammoth no trae esta información, así que
+// sin esto la vista previa y el PDF siempre usaban la fuente fija del CSS
+// (Georgia) sin importar qué fuente use realmente el Word.
+async function getDocFont(arrayBuffer){
+  try {
+    const zip = await JSZip.loadAsync(arrayBuffer);
+    const stylesFile = zip.file('word/styles.xml');
+    if (!stylesFile) return null;
+    const xml = await stylesFile.async('text');
+
+    const extractAscii = (block) => {
+      const m = block.match(/<w:rFonts\b[^>]*\bw:ascii="([^"]+)"/);
+      return m ? m[1] : null;
+    };
+
+    let fontName = null;
+    const normalMatch = xml.match(/<w:style\b[^>]*w:styleId="Normal"[^>]*>[\s\S]*?<\/w:style>/);
+    if (normalMatch) fontName = extractAscii(normalMatch[0]);
+    if (!fontName){
+      const defaultsMatch = xml.match(/<w:docDefaults>[\s\S]*?<\/w:docDefaults>/);
+      if (defaultsMatch) fontName = extractAscii(defaultsMatch[0]);
+    }
+    if (!fontName || /^(calibri|aptos)$/i.test(fontName.trim())){
+      // Calibri/Aptos son el default de Office cuando el usuario nunca
+      // tocó la fuente — con frecuencia el documento en realidad usa lo
+      // que el navegador ya trae por defecto; no vale la pena forzar una
+      // carga de Google Fonts para el caso más común y menos informativo.
+      return fontName && !/^(calibri|aptos)$/i.test(fontName.trim()) ? fontName.trim() : null;
+    }
+    return fontName.trim();
+  } catch (err) {
+    console.error('No se pudo leer la fuente del documento:', err);
+    return null;
+  }
+}
+
+const loadedGoogleFonts = new Set();
+function applyDocFont(fontName){
+  if (!fontName) return null;
+  const stack = `"${fontName}", ${SERIF_FONT_HINTS.test(fontName) ? "Georgia, 'Times New Roman', serif" : "Arial, Helvetica, sans-serif"}`;
+  if (!loadedGoogleFonts.has(fontName)){
+    loadedGoogleFonts.add(fontName);
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = `https://fonts.googleapis.com/css2?family=${encodeURIComponent(fontName).replace(/%20/g, '+')}:wght@400;700&display=swap`;
+    document.head.appendChild(link);
+  }
+  return stack;
+}
+
+// mammoth deja espacios en blanco (saltos de línea del propio HTML) entre
+// imágenes seguidas dentro de un mismo párrafo. Con inline-block, ese
+// espacio en blanco se dibuja como un hueco visible entre una imagen y la
+// siguiente — en Word, esas imágenes van pegadas sin espacio.
+function removeWhitespaceBetweenImages(container){
+  container.querySelectorAll('p').forEach((p) => {
+    if (p.querySelectorAll('img').length < 2) return;
+    Array.from(p.childNodes).forEach((node) => {
+      if (node.nodeType === Node.TEXT_NODE && !node.textContent.trim()){
+        node.remove();
+      }
+    });
+  });
+}
+
+function applyImageLayout(container, layouts, innerWidthMM){
+  const imgs = container.querySelectorAll('img');
+  imgs.forEach((img, i) => {
+    const info = layouts[i];
+    const crop = info && info.crop;
+    const visW = crop ? 1 - crop.l - crop.r : 1;
+    const visH = crop ? 1 - crop.t - crop.b : 1;
+    const hasCrop = !!crop && visW > 0 && visH > 0 && !(visW >= 0.999 && visH >= 0.999);
+
+    // El ancho con que Word muestra la imagen (wp:extent) puede ser menor
+    // al ancho de la columna de texto — mammoth la mete siempre a tamaño
+    // natural (recortado solo por max-width:100%), así que sale más grande
+    // de lo que se ve en Word. Si sale MÁS ancha que la columna (una imagen
+    // que Word deja sobresalir del margen) se deja acotada al 100%: replicar
+    // ese "sangrado" exacto es un caso mucho más complejo que no se cubre.
+    let widthPct = null;
+    if (info && info.widthMM && innerWidthMM){
+      widthPct = Math.min(100, (info.widthMM / innerWidthMM) * 100);
+    }
+
+    // La alineación real del párrafo en Word (<w:jc>) decide cómo se ubica
+    // la imagen — no se asume "centrada" por defecto, porque eso movía
+    // imágenes que en Word están a la izquierda (el valor por defecto).
+    const alignMap = { center: 'center', right: 'right', end: 'right', left: 'left', start: 'left', both: 'justify' };
+    const cssAlign = info && info.align && alignMap[info.align];
+
+    const finish = () => {
+      const natW = img.naturalWidth, natH = img.naturalHeight;
+      if (!natW || !natH) return;
+
+      let target = img;
+      if (hasCrop){
+        // padding-top (en vez de aspect-ratio) para que el recorte se vea
+        // igual en html2canvas, que no soporta bien las propiedades CSS
+        // modernas. inline-block (no block) para que, si la imagen queda
+        // más angosta que la columna, pueda seguir compartiendo línea con
+        // otra imagen de al lado — igual que en Word. vertical-align:bottom
+        // porque así es como Word acomoda varias imágenes de distinto alto
+        // en la misma fila (alineadas por abajo, no por arriba).
+        const boxRatioPct = (visH * natH) / (visW * natW) * 100;
+        const wrap = document.createElement('span');
+        wrap.style.cssText = `display:inline-block; vertical-align:bottom; position:relative; overflow:hidden; width:100%; height:0;` +
+          `padding-top:${boxRatioPct.toFixed(4)}%;`;
+        img.style.cssText = `position:absolute; max-width:none; width:${(100 / visW).toFixed(4)}%;` +
+          `left:${(-crop.l / visW * 100).toFixed(4)}%; top:${(-crop.t / visH * 100).toFixed(4)}%;`;
+        img.parentNode.insertBefore(wrap, img);
+        wrap.appendChild(img);
+        target = wrap;
+      }
+      if (widthPct != null && widthPct < 99.5){
+        target.style.width = widthPct.toFixed(4) + '%';
+        if (!hasCrop){
+          target.style.display = 'inline-block';
+          target.style.verticalAlign = 'bottom';
+        }
+      }
+      if (cssAlign){
+        const p = target.closest('p') || target.parentElement;
+        if (p) p.style.textAlign = cssAlign;
+      }
+    };
+    if (img.complete && img.naturalWidth) finish();
+    else img.addEventListener('load', finish, { once: true });
+  });
+}
+
+async function handleFile(file){
+  const isDocx = file && (file.name.toLowerCase().endsWith('.docx'));
+  if (!file || !isDocx){
+    showToast('Por favor elige un archivo .docx válido.');
+    return;
+  }
+  currentFile = file;
+  fileName.textContent = file.name;
+  fileChip.classList.add('show');
+  resultCard.classList.remove('show');
+
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const [result, layouts, pageSetup, fontName] = await Promise.all([
+      mammoth.convertToHtml({ arrayBuffer }),
+      getImageLayout(arrayBuffer),
+      getPageSetup(arrayBuffer),
+      getDocFont(arrayBuffer)
+    ]);
+    docPageSetup = pageSetup;
+    docFontFamily = applyDocFont(fontName);
+    docPreview.style.fontFamily = docFontFamily || '';
+    docPreview.innerHTML = result.value || '<p><em>(Documento vacío)</em></p>';
+    removeWhitespaceBetweenImages(docPreview);
+    if (layouts.length){
+      const innerWidthMM = pageSetup.widthMM - pageSetup.marginLeftMM - pageSetup.marginRightMM;
+      applyImageLayout(docPreview, layouts, innerWidthMM);
+    }
+    spellResults.innerHTML = '';
+    previewCard.classList.remove('hidden');
+    setStep(2);
+    previewCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  } catch (err) {
+    console.error(err);
+    showToast('No se pudo leer el documento: ' + (err?.message || err));
+  }
+}
+
+drop.addEventListener('click', () => fileInput.click());
+drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('dragover'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('dragover'));
+drop.addEventListener('drop', (e) => {
+  e.preventDefault();
+  drop.classList.remove('dragover');
+  handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+fileChange.addEventListener('click', (e) => { e.stopPropagation(); fileInput.click(); });
+
+spellBtn.addEventListener('click', async () => {
+  spellBtn.disabled = true;
+  spellBtn.textContent = '⏳ Revisando…';
+  try {
+    const d = await ensureDict();
+    const text = docPreview.innerText || '';
+    const parts = text.split(SPLIT_RE);
+    const misspelled = new Map();
+
+    for (const part of parts){
+      if (!part) continue;
+      if (WORD_RE.test(part) && part.match(WORD_RE)[0] === part){
+        if (isCheckable(part) && !checkWord(d, part)){
+          const key = part.toLowerCase();
+          if (!misspelled.has(key)){
+            const suggestions = d.suggest(part, 3);
+            misspelled.set(key, { word: part, suggestions });
+          }
+        }
+      }
+    }
+
+    if (misspelled.size === 0){
+      spellResults.innerHTML = '<div class="spell-summary ok">✓ No se encontraron errores de ortografía</div>';
+    } else {
+      let html = `<div class="spell-summary warn">⚠️ ${misspelled.size} palabra${misspelled.size === 1 ? '' : 's'} con posible error</div>`;
+      html += '<div class="spell-list">';
+      for (const { word, suggestions } of misspelled.values()){
+        const sugg = suggestions.length ? suggestions.slice(0, 2).join(', ') : 'sin sugerencias';
+        html += `<span class="spell-chip"><span class="w">${word}</span> → <span class="s">${sugg}</span></span>`;
+      }
+      html += '</div>';
+      spellResults.innerHTML = html;
+    }
+  } catch (err) {
+    console.error(err);
+    showToast('No se pudo revisar la ortografía: ' + (err?.message || err));
+  } finally {
+    spellBtn.disabled = false;
+    spellBtn.textContent = '✍️ Revisar ortografía antes de descargar';
+  }
+});
+
+function downloadBlob(blob, filename){
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+
+// El Worker de alta fidelidad (CloudConvert + LibreOffice) ya está
+// desplegado (ver worker/), pero en pausa: falta configurar la clave de
+// CloudConvert, y por ahora el conversor local ya da buenos resultados.
+// Poner esto en true (una vez configurada la clave) reactiva el camino de
+// alta fidelidad, con el conversor local como respaldo automático igual.
+const USE_WORKER = false;
+const WORKER_URL = 'https://word-a-pdf-worker.futuroiadesarrollo.workers.dev/convert';
+
+async function convertViaWorker(){
+  const res = await fetch(WORKER_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': currentFile.type || 'application/octet-stream',
+      'X-Filename': encodeURIComponent(currentFile.name)
+    },
+    body: currentFile
+  });
+  if (!res.ok){
+    const info = await res.json().catch(() => ({}));
+    throw Object.assign(new Error(info.message || `Error del servidor (${res.status})`), { code: info.error || 'unknown' });
+  }
+  return res.blob();
+}
+
+convertBtn.addEventListener('click', async () => {
+  if (!currentFile) return;
+
+  if (!USE_WORKER){
+    await convertClientSide();
+    return;
+  }
+
+  convertBtn.disabled = true;
+  progressWrap.classList.add('show');
+  progressFill.style.width = '20%';
+  progressLabel.innerHTML = '<span class="spin">☁️</span> Generando PDF (alta fidelidad)…';
+
+  try {
+    const baseName = currentFile.name.replace(/\.docx$/i, '') || 'documento';
+    const pdfBlob = await convertViaWorker();
+    downloadBlob(pdfBlob, baseName + '.pdf');
+
+    progressFill.style.width = '100%';
+    resultMeta.textContent = `${baseName}.pdf generado y descargado (motor de alta fidelidad)`;
+    resultCard.classList.remove('hidden');
+    resultCard.classList.add('show');
+    resultCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    progressLabel.textContent = '¡Listo!';
+    setStep(3);
+    convertBtn.disabled = false;
+    setTimeout(() => progressWrap.classList.remove('show'), 800);
+  } catch (err) {
+    // Cualquier falla del Worker (red, cuota agotada, CloudConvert caído,
+    // o que WORKER_URL todavía no se haya configurado) cae aquí, y en vez
+    // de dejar al usuario sin PDF, se usa el conversor local de siempre.
+    console.error('Conversión de alta fidelidad falló, usando conversor local:', err);
+    const reason = err?.code === 'quota_exceeded'
+      ? 'Se alcanzó el límite diario gratuito de conversión de alta fidelidad'
+      : 'El servicio de conversión de alta fidelidad no está disponible';
+    showToast(`${reason}; usando el conversor local como respaldo.`);
+    await convertClientSide();
+  }
+});
+
+async function convertClientSide(){
+  convertBtn.disabled = true;
+  progressWrap.classList.add('show');
+  progressFill.style.width = '30%';
+  progressLabel.innerHTML = '<span class="spin">⚙️</span> Generando PDF…';
+
+  try {
+    const baseName = currentFile.name.replace(/\.docx$/i, '') || 'documento';
+
+    // Dividir el documento en bloques por sus propios elementos (párrafos,
+    // títulos, tablas...), no por coordenadas de píxeles, y hacer que cada
+    // bloque quepa siempre en UNA sola página. La paginación automática de
+    // html2pdf (cuando una sola captura necesita varias páginas) tiene un
+    // bug real: deja un espacio en blanco arriba del contenido de la
+    // primera página y a veces superpone texto. Evitarla por completo,
+    // en vez de intentar corregirla, es lo que da un resultado confiable.
+    // Tamaño de página real del Word (o A4/12mm si no se pudo leer), para
+    // que el ancho de contenido del PDF coincida con el del documento
+    // original en vez de forzar siempre A4.
+    const pageSetup = docPageSetup || { widthMM: 210, heightMM: 297, marginTopMM: 12, marginRightMM: 12, marginBottomMM: 12, marginLeftMM: 12 };
+    const pdfMargin = [pageSetup.marginTopMM, pageSetup.marginRightMM, pageSetup.marginBottomMM, pageSetup.marginLeftMM];
+    const innerWidthMM = pageSetup.widthMM - pageSetup.marginLeftMM - pageSetup.marginRightMM;
+    const innerHeightMM = pageSetup.heightMM - pageSetup.marginTopMM - pageSetup.marginBottomMM;
+    // html2pdf arma su propio contenedor interno de captura con el ancho
+    // útil de la página convertido a píxeles a 96dpi — NO con el ancho que
+    // tenga en pantalla .doc-preview. Si nuestro bloque temporal usa un
+    // ancho distinto (por ejemplo, el del navegador), la captura queda dentro
+    // de un contenedor de html2pdf más ancho que nuestro contenido, y ese
+    // espacio de más se estira junto con todo lo demás al escalar a la
+    // página — el resultado es que TODO el contenido (texto e imágenes)
+    // sale más angosto de lo que debería, aunque el margen izquierdo se vea
+    // bien. Usar aquí el mismo cálculo evita ese desajuste para cualquier
+    // tamaño de página.
+    const contentWidth = Math.round(innerWidthMM / 25.4 * 96);
+    // .doc-preview usa box-sizing:border-box, así que su padding (32px por
+    // lado) hay que sumarlo al ancho total para que el ÁREA DE CONTENIDO
+    // (adentro del padding) quede exactamente en contentWidth px — si no,
+    // el texto se mide envuelto a un ancho distinto al que después usa el
+    // bloque temporal (que sí usa padding:0) para capturar.
+    const previewPadding = getComputedStyle(docPreview);
+    const previewPaddingX = parseFloat(previewPadding.paddingLeft) + parseFloat(previewPadding.paddingRight);
+    docPreview.style.width = (contentWidth + previewPaddingX) + 'px';
+    const PAGE_INNER_RATIO = innerHeightMM / innerWidthMM;
+    const SAFE_HEIGHT = Math.max(200, Math.floor(contentWidth * PAGE_INNER_RATIO * 0.85));
+    const children = Array.from(docPreview.children);
+    const groups = [];
+    let current = [];
+    let groupStartTop = 0;
+    for (const child of children){
+      // offsetTop refleja la posición real ya renderizada (incluye los
+      // márgenes entre párrafos); sumar offsetHeight por separado los
+      // ignora y el bloque terminaba más alto de lo calculado.
+      const childBottom = child.offsetTop + child.offsetHeight;
+      if (current.length > 0 && (childBottom - groupStartTop) > SAFE_HEIGHT){
+        groups.push(current);
+        current = [];
+        groupStartTop = child.offsetTop;
+      }
+      if (current.length === 0) groupStartTop = child.offsetTop;
+      current.push(child);
+    }
+    if (current.length) groups.push(current);
+    if (groups.length === 0) groups.push([]);
+
+    // Un párrafo con varias imágenes seguidas (por ejemplo, capturas de
+    // pantalla una debajo de otra) puede por sí solo ser mucho más alto que
+    // una página. Como el bucle de arriba nunca separa el contenido DENTRO
+    // de un mismo elemento, ese párrafo quedaba como un grupo de 1 solo
+    // elemento gigante, y html2pdf tenía que partirlo en varias páginas por
+    // su cuenta — ahí es donde aparecían páginas duplicadas o con imágenes
+    // rotas. Si un grupo de un solo elemento es más alto que lo seguro,
+    // se separa aquí por sus propios hijos (cada imagen, en la práctica),
+    // igual que se hizo arriba con los párrafos del documento.
+    function splitTallChild(child, safeHeight){
+      if (child.offsetHeight <= safeHeight) return [[child]];
+      const inner = Array.from(child.children);
+      if (inner.length === 0) return [[child]];
+      const parentTop = child.getBoundingClientRect().top;
+      const subGroups = [];
+      let cur = [];
+      let start = 0;
+      inner.forEach((el) => {
+        const rect = el.getBoundingClientRect();
+        const elTop = rect.top - parentTop;
+        const elBottom = elTop + rect.height;
+        if (cur.length > 0 && (elBottom - start) > safeHeight){
+          subGroups.push(cur);
+          cur = [];
+          start = elTop;
+        }
+        if (cur.length === 0) start = elTop;
+        cur.push(el);
+      });
+      if (cur.length) subGroups.push(cur);
+      return subGroups.map(els => {
+        const wrapperEl = child.cloneNode(false);
+        els.forEach(el => wrapperEl.appendChild(el.cloneNode(true)));
+        return [wrapperEl];
+      });
+    }
+    const expandedGroups = [];
+    for (const g of groups){
+      if (g.length === 1 && g[0].offsetHeight > SAFE_HEIGHT){
+        expandedGroups.push(...splitTallChild(g[0], SAFE_HEIGHT));
+      } else {
+        expandedGroups.push(g);
+      }
+    }
+
+    const merged = await PDFLib.PDFDocument.create();
+    for (let i = 0; i < expandedGroups.length; i++){
+      progressLabel.innerHTML = `<span class="spin">⚙️</span> Generando PDF… (parte ${i + 1} de ${expandedGroups.length})`;
+      progressFill.style.width = Math.round(10 + (i / expandedGroups.length) * 80) + '%';
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'doc-preview';
+      // Nada de position:fixed ni opacity:0 para ocultarlo: con cualquiera
+      // de los dos, html2canvas mide 0px de alto al clonar el elemento
+      // internamente y la captura sale en blanco. Con posición normal en el
+      // flujo del documento la captura sale bien; se agrega al final del
+      // body y se quita apenas termina de capturarse ese bloque.
+      // padding:0 porque el margen de la página ya lo pone html2pdf (opción
+      // margin:12 más abajo); dejar también el padding de .doc-preview
+      // duplicaba el espacio y el contenido salía más angosto que en la
+      // vista previa real.
+      wrapper.style.cssText = 'max-height:none; overflow:visible; padding:0; width:' + contentWidth + 'px;' +
+        (docFontFamily ? ' font-family:' + docFontFamily + ';' : '');
+      expandedGroups[i].forEach(node => wrapper.appendChild(node.cloneNode(true)));
+      document.body.appendChild(wrapper);
+
+      // Si la página está scrolleada al capturar, html2canvas desplaza la
+      // captura esa misma distancia y deja un espacio en blanco arriba del
+      // contenido (esto era la causa real del bug). scrollX/scrollY:0 lo
+      // fuerza a capturar siempre desde el origen, sin importar el scroll.
+      window.scrollTo(0, 0);
+      let chunkBlob;
+      try {
+        chunkBlob = await html2pdf().set({
+          margin: pdfMargin,
+          image: { type: 'jpeg', quality: 0.95 },
+          html2canvas: { scale: 2, useCORS: true, scrollX: 0, scrollY: 0 },
+          jsPDF: { unit: 'mm', format: [pageSetup.widthMM, pageSetup.heightMM], orientation: pageSetup.widthMM > pageSetup.heightMM ? 'landscape' : 'portrait' }
+        }).from(wrapper).outputPdf('blob');
+      } finally {
+        wrapper.remove();
+      }
+
+      const chunkBytes = await chunkBlob.arrayBuffer();
+      const chunkPdf = await PDFLib.PDFDocument.load(chunkBytes);
+      const copiedPages = await merged.copyPages(chunkPdf, chunkPdf.getPageIndices());
+      copiedPages.forEach(p => merged.addPage(p));
+    }
+
+    const finalBytes = await merged.save();
+    const finalBlob = new Blob([finalBytes], { type: 'application/pdf' });
+    downloadBlob(finalBlob, baseName + '.pdf');
+
+    progressFill.style.width = '100%';
+    resultMeta.textContent = `${baseName}.pdf generado y descargado · ${merged.getPageCount()} página${merged.getPageCount() === 1 ? '' : 's'}`;
+    resultCard.classList.remove('hidden');
+    resultCard.classList.add('show');
+    resultCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    progressLabel.textContent = '¡Listo!';
+    setStep(3);
+  } catch (err) {
+    console.error(err);
+    showToast('Ocurrió un error al generar el PDF: ' + (err?.message || err));
+  } finally {
+    convertBtn.disabled = false;
+    setTimeout(() => progressWrap.classList.remove('show'), 800);
+  }
+}
+
+resetBtn.addEventListener('click', () => {
+  currentFile = null;
+  fileInput.value = '';
+  fileChip.classList.remove('show');
+  previewCard.classList.add('hidden');
+  docPreview.innerHTML = '';
+  spellResults.innerHTML = '';
+  resultCard.classList.remove('show');
+  setStep(1);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+</script>
+</body>
+</html>
